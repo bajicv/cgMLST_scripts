@@ -59,7 +59,7 @@ if (is.null(opt$o)) {
 }
 
 # Load data --------------------------------------------------------------------
-profile <- read_tsv(opt$i) %>% rename_with(.cols = 1, ~"SAMPLE")
+profile <- read_tsv(opt$i, show_col_types = FALSE) %>% rename_with(.cols = 1, ~"SAMPLE")
 
 # Make long format of profile --------------------------------------------------
 profile_long <-
