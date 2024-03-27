@@ -11,11 +11,11 @@
 #   - Outputs comparison summary per sample (suffix: _SCOMP.tsv)
 #
 # Categories used in summary:
-#   S   - same allele call for in both profiles
-#   D   - different allele calls (excluding 0s)
+#   S   - same allele call in both profiles
+#   D   - different allele calls (excluding differences caused by 0s)
 #   M   - missing allele calls in both profiles
-#   M1  - missing allele call in first profile but not in second profile
-#   M2  - missing allele call in second profile but not in first profile
+#   M1  - missing allele call in the first profile but not in the second profile
+#   M2  - missing allele call in the second profile but not in the first profile
 #
 # Usage:
 #
