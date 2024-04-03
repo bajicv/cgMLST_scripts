@@ -1,5 +1,5 @@
 ################################################################################
-# Compare two cgMLST profiles for same set of samples and loci
+# Compare two cgMLST profiles for the same set of samples and loci
 #
 # Author: Vladimir Bajić
 # Date: 2024-04-03
@@ -16,6 +16,8 @@
 #   M   - missing allele calls in both profiles
 #   M1  - missing allele call in the first profile but not in the second profile
 #   M2  - missing allele call in the second profile but not in the first profile
+#   X1  - missing loci in the first profile
+#   X2  - missing loci in the second profile
 #
 # Usage:
 #
@@ -78,37 +80,51 @@ if (sum(!c(profile_1$Sample %in% profile_2$Sample)) + sum(!c(profile_2$Sample %i
         cat("WARNING: Different number of samples in profiles! \n")
     }
     if (nrow(profile_1) == nrow(profile_2)) {
-        cat("Same number of samples in both profiles: ", nrow(profile_1), " \n")
-    }
-    cat("Number of samples in profile 1: ", nrow(profile_1), "\n")
-    cat("Number of samples in profile 2: ", nrow(profile_2), "\n")
-    if (sum(duplicated(profile_1$Sample)) > 0) {
-        cat("Duplicated samples detected in profile 1: ", profile_1$Sample[duplicated(profile_1$Sample)], "\n")
-    }
-    if (sum(duplicated(profile_2$Sample)) > 0) {
-        cat("Duplicated samples detected in profile 2: ", profile_2$Sample[duplicated(profile_2$Sample)], "\n")
+        cat("Same number of samples in both profiles.\n")
     }
 } else {
     cat("WARNING: Samples in both profiles are NOT identical!")
-    cat("Number of samples in profile 1: ", nrow(profile_1), "\n")
-    cat("Number of samples in profile 2: ", nrow(profile_2), "\n")
+}
+
+# Print number of samples in each profile --------------------------------------
+cat("Number of samples in profile 1: ", nrow(profile_1), "\n")
+cat("Number of samples in profile 2: ", nrow(profile_2), "\n")
+
+# Test if samples are duplicated and list those that are -----------------------
+if (sum(duplicated(profile_1$Sample)) > 0) {
+    cat("Duplicated samples detected in profile 1: ", profile_1$Sample[duplicated(profile_1$Sample)], "\n")
+}
+if (sum(duplicated(profile_2$Sample)) > 0) {
+    cat("Duplicated samples detected in profile 2: ", profile_2$Sample[duplicated(profile_2$Sample)], "\n")
 }
 
 # Test if loci are the same ----------------------------------------------------
-if (sum(!c(names(profile_1) %in% names(profile_2))) + sum(!c(names(profile_2) %in% names(profile_1))) == 0) {
+
+p1_notin_p2 <- sum(!c(names(profile_1) %in% names(profile_2)))
+p2_notin_p1 <- sum(!c(names(profile_2) %in% names(profile_1)))
+
+if (p1_notin_p2 + p2_notin_p1 == 0) {
     cat("Loci in both profiles are identical.\n")
-    cat("Number of loci in profile 1: ", ncol(profile_1), "\n")
-    cat("Number of loci in profile 2: ", ncol(profile_2), "\n")
-    if (sum(duplicated(names(profile_1))) > 0) {
-        cat("Duplicated loci detected in profile 1: ", names(profile_1)[duplicated(names(profile_1))], "\n")
-    }
-    if (sum(duplicated(names(profile_2))) > 0) {
-        cat("Duplicated loci detected in profile 2: ", names(profile_2)[duplicated(names(profile_2))], "\n")
-    }
 } else {
     cat("WARNING: Loci in both profiles are NOT identical!\n")
-    cat("Number of loci in profile 1: ", ncol(profile_1), "\n")
-    cat("Number of loci in profile 2: ", ncol(profile_2), "\n")
+    if (p1_notin_p2 > 0) {
+        cat("Number of loci from profile 1 not present in profile 2:", p1_notin_p2, "\n")
+    }
+    if (p2_notin_p1 > 0) {
+        cat("Number of loci from profile 2 not present in profile 1:", p2_notin_p1, "\n")
+    }
+}
+
+# Print number of loci in each profile -----------------------------------------
+cat("Number of loci in profile 1: ", ncol(profile_1), "\n")
+cat("Number of loci in profile 2: ", ncol(profile_2), "\n")
+
+# Test if loci are duplicated and list those that are --------------------------
+if (sum(duplicated(names(profile_1))) > 0) {
+    cat("Duplicated loci detected in profile 1: ", names(profile_1)[duplicated(names(profile_1))], "\n")
+}
+if (sum(duplicated(names(profile_2))) > 0) {
+    cat("Duplicated loci detected in profile 2: ", names(profile_2)[duplicated(names(profile_2))], "\n")
 }
 
 # Convert to long formats ------------------------------------------------------
@@ -128,12 +144,14 @@ classified_comp <- comp %>%
             Allele_1 == Allele_2 & Allele_1 == 0 & Allele_2 == 0 ~ "M",
             Allele_1 != Allele_2 & Allele_1 == 0 & Allele_2 != 0 ~ "M1",
             Allele_1 != Allele_2 & Allele_1 != 0 & Allele_2 == 0 ~ "M2",
+            is.na(Allele_1) & !is.na(Allele_2) ~ "X1",
+            !is.na(Allele_1) & is.na(Allele_2) ~ "X2",
             TRUE ~ "Unknown"
         )
     )
 
 # List of expected Classification column names ---------------------------------
-classifications <- c("S", "D", "M", "M1", "M2") %>% map_dfr(~ tibble(!!.x := logical()))
+classifications <- c("S", "D", "M", "M1", "M2", "X1", "X2") %>% map_dfr(~ tibble(!!.x := logical()))
 
 # Comparison per Sample --------------------------------------------------------
 s_comp <-
@@ -143,8 +161,8 @@ s_comp <-
     pivot_wider(names_from = "Classification", values_from = "n", values_fill = 0) %>%
     bind_rows(., classifications) %>%
     replace(is.na(.), 0) %>%
-    select("Sample", "S", "D", "M", "M1", "M2") %>%
-    arrange(S, desc(D), desc(M), desc(M1), desc(M2))
+    select("Sample", "S", "D", "M", "M1", "M2", "X1", "X2") %>%
+    arrange(S, desc(D), desc(M), desc(M1), desc(M2), desc(X1), desc(X2))
 
 # Comparison per Locus ---------------------------------------------------------
 l_comp <-
@@ -154,8 +172,8 @@ l_comp <-
     pivot_wider(names_from = "Classification", values_from = "n", values_fill = 0) %>%
     bind_rows(., classifications) %>%
     replace(is.na(.), 0) %>%
-    select("Locus", "S", "D", "M", "M1", "M2") %>%
-    arrange(S, desc(D), desc(M), desc(M1), desc(M2))
+    select("Locus", "S", "D", "M", "M1", "M2", "X1", "X2") %>%
+    arrange(S, desc(D), desc(M), desc(M1), desc(M2), desc(X1), desc(X2))
 
 # Save output ------------------------------------------------------------------
 cat("Saving the tables as: ", paste0(opt$o, "_profile_{LCOMP,SCOMP}.tsv", "\n"))
