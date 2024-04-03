@@ -2,7 +2,7 @@
 # Plot results of compare_two_cgMLST_profiles.R
 #
 # Author: Vladimir Bajić
-# Date: April 2024
+# Date: 2024=04-03
 #
 # Description:
 # This script
@@ -15,6 +15,8 @@
 #   M   - missing allele calls in both profiles
 #   M1  - missing allele call in the first profile but not in the second profile
 #   M2  - missing allele call in the second profile but not in the first profile
+#   X1  - missing loci in the first profile
+#   X2  - missing loci in the second profile
 #
 # Usage:
 #
@@ -81,9 +83,21 @@ SCOMP <- read_tsv(opt$s, show_col_types = FALSE)
 
 
 # Plot SAMPLE ------------------------------------------------------------------
+
+my_colors <-
+    c(
+        "M" = "#1f78b4",
+        "M1" = "#ffff99",
+        "M2" = "#fdbf6f",
+        "S" = "#33a02c",
+        "D" = "#e31a1c",
+        "X1" = "#969696",
+        "X2" = "#252525"
+    )
+
 cat("Plotting SCOMP.\n")
 p_s <- SCOMP %>%
-    arrange(desc(S), D, M, M1, M2) %>%
+    arrange(desc(S), D, M, M1, M2, X1, X2) %>%
     pivot_longer(cols = -1, names_to = "Type", values_to = "Count") %>%
     mutate(Sample = forcats::fct_inorder(Sample)) %>%
     ggplot(aes(x = Count, y = Sample, fill = Type)) +
@@ -93,21 +107,13 @@ p_s <- SCOMP %>%
         x = "Loci",
         y = "Sample"
     ) +
-    scale_fill_manual(
-        values = c(
-            "M" = "#1f78b4",
-            "M1" = "#ffff99",
-            "M2" = "#fdbf6f",
-            "S" = "#33a02c",
-            "D" = "#e31a1c"
-        )
-    ) +
+    scale_fill_manual(values = my_colors) +
     theme_bw()
 
 # Plot LOCUS -------------------------------------------------------------------
 cat("Plotting LCOMP.\n")
 p_l <- LCOMP %>%
-    arrange(desc(S), D, M, M1, M2) %>%
+    arrange(desc(S), D, M, M1, M2, X1, X2) %>%
     filter(S < nrow(SCOMP) * (opt$t) / 100) %>%
     pivot_longer(cols = -1, names_to = "Type", values_to = "Count") %>%
     mutate(Locus = forcats::fct_inorder(Locus)) %>%
@@ -119,15 +125,7 @@ p_l <- LCOMP %>%
         x = "Samples",
         y = "Locus",
     ) +
-    scale_fill_manual(
-        values = c(
-            "M" = "#1f78b4",
-            "M1" = "#ffff99",
-            "M2" = "#fdbf6f",
-            "S" = "#33a02c",
-            "D" = "#e31a1c"
-        )
-    ) +
+    scale_fill_manual(values = my_colors) +
     theme_bw()
 
 # Save plots -------------------------------------------------------------------
