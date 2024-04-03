@@ -81,9 +81,7 @@ cat("Reading in the data.\n")
 LCOMP <- read_tsv(opt$l, show_col_types = FALSE)
 SCOMP <- read_tsv(opt$s, show_col_types = FALSE)
 
-
-# Plot SAMPLE ------------------------------------------------------------------
-
+# Define colors for the plot ---------------------------------------------------
 my_colors <-
     c(
         "M" = "#1f78b4",
@@ -95,6 +93,7 @@ my_colors <-
         "X2" = "#252525"
     )
 
+# Plot SAMPLE ------------------------------------------------------------------
 cat("Plotting SCOMP.\n")
 p_s <- SCOMP %>%
     arrange(desc(S), D, M, M1, M2, X1, X2) %>%
