@@ -57,7 +57,7 @@ profile_prepared <-
     profile %>%
     mutate(across(.cols = -1, ~ str_replace(., "^[[:space:]]+", ""))) %>%
     mutate(across(.cols = -1, ~ str_replace(., "^INF-", ""))) %>%
-    mutate(across(.cols = -1, ~ str_replace(., "[[:alpha:]]+", "0")))
+    mutate(across(.cols = -1, ~ str_replace(., "^[[:alpha:]]+.*", "0")))
 
 # Save output ------------------------------------------------------------------
 cat("Saving profile as: ", paste0(opt$o, "_prepared.tsv", "\n"))
