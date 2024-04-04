@@ -48,10 +48,6 @@ option_list <- list(
 opt_parser <- OptionParser(option_list = option_list)
 opt <- parse_args(opt_parser)
 
-# DEV TEST ONLY
-opt$f <- "/scratch/Projekte/MF1_GE/Research_Projects/cgMLST_benchmarking/Salmonella/1_analysis/5_seqsphere/Salmonella_Testdaten_FG11.profile_NoLastTab_0s.tsv"
-opt$s <- "/scratch/projekte/MF1_GE/Research_Projects/cgMLST_benchmarking/Salmonella/1_analysis/2_hash_cgMLST/Salmonella_Testdaten_FG11_hash-cgMLST.profile"
-
 # Check the provided option and execute the corresponding code -----------------
 if (is.null(opt$f)) {
     print_help(opt_parser)
