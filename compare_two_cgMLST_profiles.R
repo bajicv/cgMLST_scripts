@@ -1,12 +1,13 @@
 ################################################################################
-# Compare two cgMLST profiles for the same set of samples and loci
+# Compare two cgMLST profiles for same set of samples and loci
 #
 # Author: Vladimir Bajić
-# Date: 2024-04-03
+# Date: 2024-04-04
 #
 # Description:
 # This script
 #   - Compares two cgMLST profiles for the same set of samples and loci
+#   - Outputs general comparison summary (suffix: _LCOMP.tsv)
 #   - Outputs comparison summary per locus (suffix: _LCOMP.tsv)
 #   - Outputs comparison summary per sample (suffix: _SCOMP.tsv)
 #
@@ -47,6 +48,10 @@ option_list <- list(
 opt_parser <- OptionParser(option_list = option_list)
 opt <- parse_args(opt_parser)
 
+# DEV TEST ONLY
+opt$f <- "/scratch/Projekte/MF1_GE/Research_Projects/cgMLST_benchmarking/Salmonella/1_analysis/5_seqsphere/Salmonella_Testdaten_FG11.profile_NoLastTab_0s.tsv"
+opt$s <- "/scratch/projekte/MF1_GE/Research_Projects/cgMLST_benchmarking/Salmonella/1_analysis/2_hash_cgMLST/Salmonella_Testdaten_FG11_hash-cgMLST.profile"
+
 # Check the provided option and execute the corresponding code -----------------
 if (is.null(opt$f)) {
     print_help(opt_parser)
@@ -73,13 +78,23 @@ profile_1 <- read_tsv(opt$f, show_col_types = FALSE) %>% rename_with(.cols = 1, 
 cat("Loading profile 2 ...\n")
 profile_2 <- read_tsv(opt$s, show_col_types = FALSE) %>% rename_with(.cols = 1, ~"Sample")
 
+# Calculate basic stats --------------------------------------------------------
+
+## Number of samples in each profile
+nsp1 <- nrow(profile_1)
+nsp2 <- nrow(profile_2)
+
+## Number of loci in each profile
+nlp1 <- ncol(profile_1)
+nlp2 <- ncol(profile_2)
+
 # Test if samples are the same -------------------------------------------------
 if (sum(!c(profile_1$Sample %in% profile_2$Sample)) + sum(!c(profile_2$Sample %in% profile_1$Sample)) == 0) {
     cat("Same sample IDs present in both profiles.\n")
-    if (nrow(profile_1) != nrow(profile_2)) {
+    if (nsp1 != nsp2) {
         cat("WARNING: Different number of samples in profiles! \n")
     }
-    if (nrow(profile_1) == nrow(profile_2)) {
+    if (nsp1 == nsp2) {
         cat("Same number of samples in both profiles.\n")
     }
 } else {
@@ -87,8 +102,8 @@ if (sum(!c(profile_1$Sample %in% profile_2$Sample)) + sum(!c(profile_2$Sample %i
 }
 
 # Print number of samples in each profile --------------------------------------
-cat("Number of samples in profile 1: ", nrow(profile_1), "\n")
-cat("Number of samples in profile 2: ", nrow(profile_2), "\n")
+cat("Number of samples in profile 1: ", nsp1, "\n")
+cat("Number of samples in profile 2: ", nsp2, "\n")
 
 # Test if samples are duplicated and list those that are -----------------------
 if (sum(duplicated(profile_1$Sample)) > 0) {
@@ -100,24 +115,24 @@ if (sum(duplicated(profile_2$Sample)) > 0) {
 
 # Test if loci are the same ----------------------------------------------------
 
-p1_notin_p2 <- sum(!c(names(profile_1) %in% names(profile_2)))
-p2_notin_p1 <- sum(!c(names(profile_2) %in% names(profile_1)))
+lp1_notin_lp2 <- sum(!c(names(profile_1) %in% names(profile_2)))
+lp2_notin_lp1 <- sum(!c(names(profile_2) %in% names(profile_1)))
 
-if (p1_notin_p2 + p2_notin_p1 == 0) {
+if (lp1_notin_lp2 + lp2_notin_lp1 == 0) {
     cat("Loci in both profiles are identical.\n")
 } else {
     cat("WARNING: Loci in both profiles are NOT identical!\n")
-    if (p1_notin_p2 > 0) {
-        cat("Number of loci from profile 1 not present in profile 2:", p1_notin_p2, "\n")
+    if (lp1_notin_lp2 > 0) {
+        cat("Number of loci from profile 1 not present in profile 2:", lp1_notin_lp2, "\n")
     }
-    if (p2_notin_p1 > 0) {
-        cat("Number of loci from profile 2 not present in profile 1:", p2_notin_p1, "\n")
+    if (lp2_notin_lp1 > 0) {
+        cat("Number of loci from profile 2 not present in profile 1:", lp2_notin_lp1, "\n")
     }
 }
 
 # Print number of loci in each profile -----------------------------------------
-cat("Number of loci in profile 1: ", ncol(profile_1), "\n")
-cat("Number of loci in profile 2: ", ncol(profile_2), "\n")
+cat("Number of loci in profile 1: ", nlp1, "\n")
+cat("Number of loci in profile 2: ", nlp2, "\n")
 
 # Test if loci are duplicated and list those that are --------------------------
 if (sum(duplicated(names(profile_1))) > 0) {
@@ -153,6 +168,37 @@ classified_comp <- comp %>%
 # List of expected Classification column names ---------------------------------
 classifications <- c("S", "D", "M", "M1", "M2", "X1", "X2") %>% map_dfr(~ tibble(!!.x := logical()))
 
+
+# General comparison -----------------------------------------------------------
+# if SUM is different from Total_COMP something is wrong!
+g_comp <-
+    classified_comp %>%
+    group_by(Classification) %>%
+    summarise(n = n()) %>%
+    pivot_wider(names_from = "Classification", values_from = "n", values_fill = 0) %>%
+    bind_rows(., classifications) %>%
+    replace(is.na(.), 0) %>%
+    mutate(
+        Total_COMP = nrow(classified_comp),
+        SUM = S + D + M + M1 + M2 + X1 + X2,
+        pct_S = S / Total_COMP * 100,
+        pct_D = D / Total_COMP * 100,
+        pct_M = M / Total_COMP * 100,
+        pct_M1 = M1 / Total_COMP * 100,
+        pct_M2 = M2 / Total_COMP * 100,
+        pct_X1 = X1 / Total_COMP * 100,
+        pct_X2 = X2 / Total_COMP * 100,
+        Profile_1 = opt$f,
+        Profile_2 = opt$s,
+        NLP1 = nlp1,
+        NLP2 = nlp2,
+        NSP1 = nsp1,
+        NSP2 = nsp2,
+        LP1_notin_LP2 = lp1_notin_lp2,
+        LP2_notin_LP1 = lp2_notin_lp1
+    ) %>%
+    relocate(Profile_1, Profile_2, NLP1, NLP2, NSP1, NSP2, LP1_notin_LP2, LP2_notin_LP1, Total_COMP, SUM, S, D, M, M1, M2, X1, X2, pct_S, pct_D, pct_M, pct_M1, pct_M2, pct_X1, pct_X2)
+
 # Comparison per Sample --------------------------------------------------------
 s_comp <-
     classified_comp %>%
@@ -176,6 +222,7 @@ l_comp <-
     arrange(S, desc(D), desc(M), desc(M1), desc(M2), desc(X1), desc(X2))
 
 # Save output ------------------------------------------------------------------
-cat("Saving the tables as: ", paste0(opt$o, "_profile_{LCOMP,SCOMP}.tsv", "\n"))
+cat("Saving the tables as: ", paste0(opt$o, "_profile_{GCOMP,LCOMP,SCOMP}.tsv", "\n"))
+write_tsv(g_comp, paste0(opt$o, "_profile_GCOMP.tsv"))
 write_tsv(l_comp, paste0(opt$o, "_profile_LCOMP.tsv"))
 write_tsv(s_comp, paste0(opt$o, "_profile_SCOMP.tsv"))
