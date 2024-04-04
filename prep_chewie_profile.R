@@ -50,7 +50,7 @@ if (is.null(opt$o)) {
 
 # Load data --------------------------------------------------------------------
 cat("Loading profile ...\n")
-profile <- read_tsv(opt$i, show_col_types = FALSE, col_types = cols(.default = "c")) %>% rename_with(.cols = 1, ~"Sample")
+profile <- read_tsv(opt$i, show_col_types = FALSE, col_types = cols(.default = "c"))
 
 # Set problematic allele calls to 0s -------------------------------------------
 profile_prepared <-
