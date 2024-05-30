@@ -83,10 +83,10 @@ if (is.null(opt$o)) {
 
 # Load data --------------------------------------------------------------------
 cat("Loading profile 1 ...\n")
-profile_1 <- read_tsv(opt$f, show_col_types = FALSE) %>% rename_with(.cols = 1, ~"Sample")
+profile_1 <- read_tsv(opt$f, show_col_types = FALSE, col_types = cols(.default = "c")) %>% rename_with(.cols = 1, ~"Sample")
 
 cat("Loading profile 2 ...\n")
-profile_2 <- read_tsv(opt$s, show_col_types = FALSE) %>% rename_with(.cols = 1, ~"Sample")
+profile_2 <- read_tsv(opt$s, show_col_types = FALSE, col_types = cols(.default = "c")) %>% rename_with(.cols = 1, ~"Sample")
 
 # Calculate basic stats --------------------------------------------------------
 
