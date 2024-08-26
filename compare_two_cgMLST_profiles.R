@@ -2,7 +2,7 @@
 # Compare two cgMLST profiles for same set of samples and loci
 #
 # Author: Vladimir Bajić
-# Date: 2024-04-09
+# Date: 2024-08-26
 #
 # Description:
 # This script
@@ -60,7 +60,6 @@ option_list <- list(
 # Parsing options
 opt_parser <- OptionParser(option_list = option_list)
 opt <- parse_args(opt_parser)
-
 
 # Check the provided option and execute the corresponding code -----------------
 if (is.null(opt$f)) {
@@ -371,21 +370,19 @@ pwdist_p2_long <- profile_pwdist_long_tibble(profile_2)
 
 ## Calculate difference between P1 and P2
 cat("Calculating differences between two profiles' allelic pairwise distances between samples. \n")
-diff_p1_p2 <-
+dist_and_diff_p1_p2 <-
     full_join(pwdist_p1_long, pwdist_p2_long, by = join_by(Sample.x, Sample.y)) %>%
-    mutate(diff = dist.x - dist.y) %>%
-    select(-dist.x, -dist.y)
+    rename(dist_P1 = dist.x, dist_P2 = dist.y) %>%
+    mutate(diff = dist_P1 - dist_P2)
+
+diff_p1_p2 <-
+    dist_and_diff_p1_p2 %>%
+    select(-dist_P1, -dist_P2)
 
 ## Save tables with allelic pairwise distances between samples -----------------
 cat("Saving tables with allelic pairwise distances between samples in profiles. \n")
 write_tsv(pwdist_p1, paste0(opt$o, "_PWD_P1.tsv"))
 write_tsv(pwdist_p2, paste0(opt$o, "_PWD_P2.tsv"))
-
-cat("Saving table with differences between allelic pairwise distances between samples in two profiles. \n")
-diff_p1_p2 %>%
-    pivot_wider(names_from = Sample.y, values_from = diff) %>%
-    rename(Sample = "Sample.x") %>%
-    write_tsv(., paste0(opt$o, "_DIFF_PWD_P1_P2.tsv"))
 
 # Heat plots of pairwise distances ---------------------------------------------
 cat("Plotting heat plots with pairwise distances.\n")
@@ -453,7 +450,7 @@ p_diff_p1_p2 <-
     )
 
 # Save heat plots --------------------------------------------------------------
-cat("Saving heat plots.\n")
+cat("Saving plots.\n")
 ggsave(paste0(opt$o, "_heatplot_PWD_P1.png"), p_pwdist_p1, width = 10, height = 10)
 ggsave(paste0(opt$o, "_heatplot_PWD_P2.png"), p_pwdist_p2, width = 10, height = 10)
 ggsave(paste0(opt$o, "_heatplot_DIFF_PWD_P1_P2.png"), p_diff_p1_p2, width = 10, height = 10)
@@ -499,3 +496,54 @@ p_histograms <-
 # Save histograms --------------------------------------------------------------
 cat("Saving histograms.\n")
 ggsave(paste0(opt$o, "_histograms.png"), p_histograms, width = 10, height = 5)
+
+
+# Scatter plot of pairwise distances between two profiles ----------------------
+
+cat("Plotting scatter plot of pairwise distances between two profiles.\n")
+## Full scatter plot of pairwise distances between two profiles
+p_pwd_p1_p2 <-
+    dist_and_diff_p1_p2 %>%
+    ggplot(aes(x = dist_P1, y = dist_P2, color = diff)) +
+    geom_abline(slope = 1, intercept = 0, linetype = 2) +
+    geom_point(alpha = 0.2) +
+    theme_bw() +
+    scale_color_gradient2(mid = "gray") +
+    coord_fixed() +
+    xlab("Pairwise distances between samples in P1") +
+    ylab("Pairwise distances between samples in P2") +
+    labs(color = "Diff [P1 - P2]")
+
+## Zoom scatter plot of pairwise distances between two profiles
+## Relevant for cluster detection
+p_pwd_p1_p2_zoom <-
+    dist_and_diff_p1_p2 %>%
+    filter(dist_P1 < 10 | dist_P2 < 10) %>%
+    ggplot(aes(x = dist_P1, y = dist_P2, color = diff)) +
+    geom_abline(slope = 1, intercept = 0, linetype = 2) +
+    geom_point(alpha = 0.2) +
+    theme_bw() +
+    scale_color_gradient2(mid = "gray") +
+    theme(aspect.ratio = 1) +
+    xlab("Pairwise distances between samples in P1") +
+    ylab("Pairwise distances between samples in P2") +
+    labs(color = "Diff [P1 - P2]")
+
+# Save scatter plots -----------------------------------------------------------
+cat("Saving scatter plot of PWD between P1 and P2\n")
+ggsave(paste0(opt$o, "_scatter_plot_PWD_P1_vs_P2.png"), p_pwd_p1_p2, width = 8, height = 8)
+ggsave(paste0(opt$o, "_scatter_plot_PWD_P1_vs_P2_zoom.png"), p_pwd_p1_p2_zoom, width = 8, height = 8)
+
+
+# Per same sample (replicates) differences between two profiles ----------------
+p_dist_replicates_hist <-
+    SCOMP %>%
+    select(Sample, D) %>%
+    ggplot(aes(x = D)) +
+    geom_histogram(binwidth = 1, fill = "black") +
+    theme_bw() +
+    xlab("cgMLST allele distance between same samples genotyped with two different tools")
+
+# Save histogram ---------------------------------------------------------------
+cat("Saving histogram with cgMLST allele distance between same sample genotyped with two different tools. \n")
+ggsave(paste0(opt$o, "_dist_histogram_replicates_genotyped_with_different_tools.png"), p_dist_replicates_hist, width = 8, height = 4)
