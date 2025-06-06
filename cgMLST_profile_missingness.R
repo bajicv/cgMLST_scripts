@@ -2,7 +2,7 @@
 # Calculate and plot cgMLST profile missingness
 #
 # Author: Vladimir Bajić
-# Date: March 2024
+# Date: June 2025
 #
 # Description:
 # This script
@@ -59,7 +59,7 @@ if (is.null(opt$o)) {
 }
 
 # Load data --------------------------------------------------------------------
-profile <- read_tsv(opt$i, show_col_types = FALSE) %>% rename_with(.cols = 1, ~"SAMPLE")
+profile <- read_tsv(opt$i, col_types = cols(.default = col_character()), show_col_types = FALSE) %>% rename_with(.cols = 1, ~"SAMPLE")
 
 # Make long format of profile --------------------------------------------------
 profile_long <-
